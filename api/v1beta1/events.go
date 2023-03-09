@@ -56,6 +56,7 @@ const (
 	// Warning events
 	EventEmptyDisruption                string = "EmptyDisruption"
 	EventDisruptionCreationFailed       string = "CreateFailed"
+	EventDisruptionNotRunning           string = "NotRunning"
 	EventDisruptionStuckOnRemoval       string = "StuckOnRemoval"
 	EventInvalidDisruptionLabelSelector string = "InvalidLabelSelector"
 	EventDisruptionNoMoreValidTargets   string = "NoMoreTargets"
@@ -187,6 +188,12 @@ var Events = map[string]DisruptionEvent{
 		Type:                        corev1.EventTypeWarning,
 		Reason:                      EventDisruptionCreationFailed,
 		OnDisruptionTemplateMessage: "Injection pod for disruption \"%s\" failed to be created",
+		Category:                    DisruptEvent,
+	},
+	EventDisruptionNotRunning: {
+		Type:                        corev1.EventTypeWarning,
+		Reason:                      EventDisruptionNotRunning,
+		OnDisruptionTemplateMessage: "Injection pod for disruption \"%s\" is not running",
 		Category:                    DisruptEvent,
 	},
 	EventDisruptionStuckOnRemoval: {

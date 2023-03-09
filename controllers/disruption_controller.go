@@ -510,6 +510,17 @@ func (r *DisruptionReconciler) createChaosPods(instance *chaosv1beta1.Disruption
 				continue
 			}
 
+			go func() {
+				// wait for the pod to be in a running state
+				if err := r.waitForPodRunningState(chaosPod); err != nil {
+					r.recordEventOnDisruption(instance, chaosv1beta1.EventDisruptionNotRunning, instance.Name)
+					r.handleMetricSinkError(r.MetricsSink.MetricPodsCreated(target, instance.Name, instance.Namespace, false))
+
+					r.log.Warnw("error waiting for chaos pod to be running", "error", err, "chaosPod", chaosPod.Name, "target", target)
+
+				}
+			}()
+
 			// send metrics and events
 			r.recordEventOnDisruption(instance, chaosv1beta1.EventDisruptionChaosPodCreated, instance.Name)
 			r.recordEventOnTarget(instance, target, chaosv1beta1.EventDisrupted, chaosPod.Name, instance.Name)
@@ -544,6 +555,31 @@ func (r *DisruptionReconciler) waitForPodCreation(pod *corev1.Pod) error {
 		}
 
 		return err
+	}, expBackoff)
+}
+
+func (r *DisruptionReconciler) waitForPodRunningState(pod *corev1.Pod) error {
+	expBackoff := backoff.NewExponentialBackOff()
+	expBackoff.MaxInterval = time.Second
+	expBackoff.MaxElapsedTime = 30 * time.Second
+
+	return backoff.Retry(func() error {
+		if err := r.Get(context.Background(), types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name}, pod); err != nil {
+			if client.IgnoreNotFound(err) != nil {
+				return backoff.Permanent(err)
+			}
+			return err
+		}
+
+		for _, cond := range pod.Status.Conditions {
+			if cond.Type == corev1.PodReady {
+				if cond.Status == corev1.ConditionTrue {
+					return nil
+				}
+			}
+		}
+
+		return fmt.Errorf("the chaos pod is not in a running state")
 	}, expBackoff)
 }
 

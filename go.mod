@@ -5,7 +5,6 @@ go 1.18
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/DataDog/datadog-go v4.8.3+incompatible
-	github.com/aquasecurity/libbpfgo v0.4.5-libbpf-1.0.1
 	github.com/aquasecurity/libbpfgo/helpers v0.4.5
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/cenkalti/backoff v2.2.1+incompatible
@@ -25,7 +24,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20230420174744-55c8b9515a01
 	github.com/vishvananda/netns v0.0.5-0.20230405050519-16c2fa0b2f57
 	go.opentelemetry.io/otel v1.16.0
@@ -45,6 +44,8 @@ require (
 	sigs.k8s.io/controller-tools v0.11.4
 	sigs.k8s.io/yaml v1.3.0
 )
+
+require github.com/aquasecurity/libbpfgo v0.5.0-libbpf-1.2
 
 require (
 	github.com/DataDog/appsec-internal-go v1.0.0 // indirect

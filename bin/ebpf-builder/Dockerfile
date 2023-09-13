@@ -10,7 +10,8 @@ RUN apt-get update && \
     clang \
     libelf-dev \
     libbpf-dev \
-    llvm
+    llvm \
+    git
 
 ARG TARGETARCH
 RUN ([ "${TARGETARCH}" = "amd64" ] && apt-get install -y libc6-dev-i386) || true
@@ -23,6 +24,13 @@ ENV TARGETARCH=${TARGETARCH} \
 WORKDIR /tmp
 COPY ./scripts/install-go /tmp/install-go
 RUN /tmp/install-go && rm -f /tmp/install-go
+
+RUN git clone --recurse-submodules https://github.com/libbpf/bpftool.git && \
+    cd bpftool && \
+    git submodule update --init && \
+    cd src && \
+    make && \
+    make install
 
 # Setup working directory.
 WORKDIR /app/ebpf

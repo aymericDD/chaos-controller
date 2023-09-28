@@ -23,6 +23,14 @@
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
+#ifndef printt
+# define printt(fmt, ...)						\
+	({								\
+		char ____fmt[] = fmt;					\
+		bpf_trace_printk(____fmt, sizeof(____fmt), ##__VA_ARGS__);	\
+	})
+#endif
+
 static __always_inline bool has_prefix(char* str, char* prefix) {
     int prefix_len = 0;
     prefix_len = (int) (sizeof(prefix) / sizeof(prefix[0])) - 1;
@@ -38,11 +46,3 @@ static __always_inline bool has_prefix(char* str, char* prefix) {
     return true;
 }
 
-
-#ifndef printt
-# define printt(fmt, ...)						\
-	({								\
-		char ____fmt[] = fmt;					\
-		bpf_trace_printk(____fmt, sizeof(____fmt), ##__VA_ARGS__);	\
-	})
-#endif

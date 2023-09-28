@@ -31,11 +31,19 @@ var (
 )
 
 const ValueSize = 100
-const MapName = "flags_map"
+const FlagsMapName = "flags_map"
+const MAX_PATH_LEN = 20
+const MAX_ENTRIES = 5
+const MAX_METHOD_LEN = 10
 
 type BPFMap struct {
 	name string
 	fd   C.int
+}
+
+// Define a Go struct that matches the layout of the value in the BPF map
+type MethodPaths struct {
+	Paths [MAX_ENTRIES][MAX_PATH_LEN]byte
 }
 
 func (b *BPFMap) Update(key, value unsafe.Pointer) error {
@@ -48,29 +56,63 @@ func (b *BPFMap) Update(key, value unsafe.Pointer) error {
 
 func main() {
 	flag.Parse()
-	path := []byte(*nPath)
-	method := []byte(*nMethod)
+	//path := []byte(*nPath)
+	//method := []byte(*nMethod)
 	logger, err = log.NewZapLogger()
 	if err != nil {
 		logger.Fatalf("could not initialize the logger: %w", err, err)
 	}
 
-	bpfMap, err := GetMapByName("flags_map")
+	//bpfMap, err := GetMapByName("flags_map")
+	//if err != nil {
+	//	logger.Fatalf("could not get the flags_map: %w", err)
+	//}
+	//
+	//// Update the path
+	//if err = updateMap(uint32(0), path, ValueSize, bpfMap); err != nil {
+	//	logger.Fatalf("could not update the path: %w", err)
+	//}
+	//
+	//// Update the method
+	//if err = updateMap(uint32(1), method, ValueSize, bpfMap); err != nil {
+	//	logger.Fatalf("could not update the method: %w", err)
+	//}
+
+	//logger.Infof("the %s map is updated", FlagsMapName)
+
+	configBPFMap, err := GetMapByName("config_map")
 	if err != nil {
-		logger.Fatalf("could not get the flags_map: %w", err, err)
+		logger.Fatalf("could not get the config_map: %w", err)
 	}
 
-	// Update the path
-	if err = updateMap(uint32(0), path, ValueSize, bpfMap); err != nil {
-		logger.Fatalf("could not update the path: %w", err)
-	}
+	methodGET := [MAX_METHOD_LEN]byte{'G', 'E', 'T', '\x00'}
 
-	// Update the method
-	if err = updateMap(uint32(1), method, ValueSize, bpfMap); err != nil {
-		logger.Fatalf("could not update the method: %w", err)
-	}
+	// Create an instance of the MethodPaths struct
+	var value MethodPaths
+	// Add paths to the MethodPaths struct (example)
+	path1 := "/path1"
+	path2 := "/"
+	copy(value.Paths[0][:len(path1)], path1)
+	copy(value.Paths[1][:len(path2)], path2)
 
-	logger.Infof("the %s map is updated", MapName)
+	// Serialize the MethodPaths struct into a byte slice
+	valueBytes := (*[unsafe.Sizeof(value)]byte)(unsafe.Pointer(&value))[:]
+
+	configBPFMap.Update(unsafe.Pointer(&methodGET), unsafe.Pointer(&valueBytes[0]))
+
+	//methodDELETE := C.CString("DELETE")
+
+	//// Create an instance of the MethodPaths struct
+	//var value2 MethodPaths
+	//// Add paths to the MethodPaths struct (example)
+	//copy(value2.Paths[0][:MAX_PATH_LEN], path1)
+	//copy(value2.Paths[1][:MAX_PATH_LEN], path2)
+	//value2.NumPaths = int32(2)
+	//
+	//// Serialize the MethodPaths struct into a byte slice
+	//value2Bytes := (*[unsafe.Sizeof(value2)]byte)(unsafe.Pointer(&value2))[:]
+	//
+	//configBPFMap.Update(unsafe.Pointer(&methodDELETE), unsafe.Pointer(&value2Bytes[0]))
 }
 
 func updateMap(key uint32, value []byte, valueSize int, bpfMap *BPFMap) error {
@@ -83,18 +125,15 @@ func updateMap(key uint32, value []byte, valueSize int, bpfMap *BPFMap) error {
 }
 
 func GetMapByName(name string) (*BPFMap, error) {
-	startId := C.uint(0)
-	nextId := C.uint(0)
+	id := C.uint(0)
 
 	for {
-		err := C.bpf_map_get_next_id(startId, &nextId)
+		err := C.bpf_map_get_next_id(id, &id)
 		if err != 0 {
 			return nil, fmt.Errorf("could not get the map: %w", syscall.Errno(-err))
 		}
 
-		startId = nextId + 1
-
-		fd := C.bpf_map_get_fd_by_id(nextId)
+		fd := C.bpf_map_get_fd_by_id(id)
 		if fd < 0 {
 			return nil, fmt.Errorf("could not get the file descriptor of %s", name)
 		}
@@ -107,6 +146,7 @@ func GetMapByName(name string) (*BPFMap, error) {
 		}
 
 		mapName := C.GoString((*C.char)(unsafe.Pointer(&info.name[0])))
+		logger.Infof("id: %d name: %s", id, mapName)
 		if mapName != name {
 			continue
 		}
